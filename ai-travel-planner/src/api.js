@@ -44,6 +44,16 @@
 //     return { error: "Failed to reach backend" };
 //   }
 // };
+// const BASE = "http://localhost:5000/api";
+
+// export async function askBot(message) {
+//   const res = await fetch(`${BASE}/chat`, {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ message }),
+//   });
+//   return await res.json();
+// }
 const BASE = "http://localhost:5000/api";
 
 export async function askBot(message) {
@@ -52,6 +62,20 @@ export async function askBot(message) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
   });
+  return await res.json();
+}
+
+export async function generatePlan(data) {
+  const res = await fetch(`${BASE}/generate-plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to generate plan");
+  }
+
   return await res.json();
 }
 

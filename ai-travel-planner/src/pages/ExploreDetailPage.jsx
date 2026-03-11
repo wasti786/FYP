@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-<link rel="stylesheet" href="ExploreDetailPage.css" />
+import "../CSS/ExploreDetailPage.css";
 
 import Hunza from "../assets/hunza/altitfort.jpg";
 import Nagar from "../assets/nagar/hoparglacier1.jpg";

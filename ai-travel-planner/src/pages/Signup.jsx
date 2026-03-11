@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { sendEmailVerification, signOut } from "firebase/auth";
+import { auth } from "../firebase";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const nav = useNavigate();
@@ -14,10 +17,23 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
+
     try {
-      await signup(email, pass, name);
-      nav("/planner");
+      
+      const user = await signup(email, pass, name);
+
+      
+      await sendEmailVerification(auth.currentUser);
+
+      
+      await signOut(auth);
+
+      
+      setSuccess(
+        "Account created! A verification email has been sent to your inbox. Please verify before logging in."
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -29,7 +45,7 @@ export default function Signup() {
     <div className="auth-container">
       <div className="container">
         <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-5">
+          <div className="col-md-6 col-lg-5" style={{ marginTop: "100px" }}>
             <div className="card auth-card shadow border-0 rounded-4">
               <div className="card-body p-5">
                 <div className="auth-header">
@@ -39,74 +55,93 @@ export default function Signup() {
                   <h2 className="fw-bold text-primary">Create Account</h2>
                   <p className="text-muted">Join us to start your adventure</p>
                 </div>
-                
+
                 {error && (
                   <div className="alert alert-danger" role="alert">
                     <i className="fas fa-exclamation-circle me-2"></i>
                     {error}
                   </div>
                 )}
-                
+
+                {success && (
+                  <div className="alert alert-success" role="alert">
+                    <i className="fas fa-check-circle me-2"></i>
+                    {success}
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3">
-                    <label htmlFor="name" className="form-label fw-semibold">Full Name</label>
+                    <label htmlFor="name" className="form-label fw-semibold">
+                      Full Name
+                    </label>
                     <div className="input-group">
                       <span className="input-group-text bg-transparent border-end-0">
                         <i className="fas fa-user text-primary"></i>
                       </span>
-                      <input 
-                        required 
-                        type="text" 
-                        className="form-control border-start-0 py-3" 
+                      <input
+                        required
+                        type="text"
+                        className="form-control border-start-0 py-3"
                         id="name"
-                        placeholder="Enter your full name" 
-                        value={name} 
-                        onChange={e => setName(e.target.value)} 
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                       />
                     </div>
                   </div>
+
                   <div className="mb-3">
-                    <label htmlFor="email" className="form-label fw-semibold">Email Address</label>
+                    <label htmlFor="email" className="form-label fw-semibold">
+                      Email Address
+                    </label>
                     <div className="input-group">
                       <span className="input-group-text bg-transparent border-end-0">
                         <i className="fas fa-envelope text-primary"></i>
                       </span>
-                      <input 
-                        required 
-                        type="email" 
-                        className="form-control border-start-0 py-3" 
+                      <input
+                        required
+                        type="email"
+                        className="form-control border-start-0 py-3"
                         id="email"
-                        placeholder="Enter your email" 
-                        value={email} 
-                        onChange={e => setEmail(e.target.value)} 
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                   </div>
+
                   <div className="mb-4">
-                    <label htmlFor="password" className="form-label fw-semibold">Password</label>
+                    <label htmlFor="password" className="form-label fw-semibold">
+                      Password
+                    </label>
                     <div className="input-group">
                       <span className="input-group-text bg-transparent border-end-0">
                         <i className="fas fa-lock text-primary"></i>
                       </span>
-                      <input 
-                        required 
-                        type="password" 
-                        className="form-control border-start-0 py-3" 
+                      <input
+                        required
+                        type="password"
+                        className="form-control border-start-0 py-3"
                         id="password"
-                        placeholder="Create a password" 
-                        value={pass} 
-                        onChange={e => setPass(e.target.value)} 
+                        placeholder="Create a password"
+                        value={pass}
+                        onChange={(e) => setPass(e.target.value)}
                       />
                     </div>
                   </div>
-                  <button 
-                    type="submit" 
+
+                  <button
+                    type="submit"
                     className="btn btn-primary w-100 py-3 rounded-3 fw-semibold"
                     disabled={loading}
                   >
                     {loading ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                        ></span>
                         Creating Account...
                       </>
                     ) : (
@@ -116,10 +151,16 @@ export default function Signup() {
                     )}
                   </button>
                 </form>
-                
+
                 <div className="text-center mt-4">
                   <p className="text-muted">
-                    Already have an account? <Link to="/login" className="text-primary text-decoration-none fw-semibold">Sign in</Link>
+                    Already have an account?{" "}
+                    <Link
+                      to="/login"
+                      className="text-primary text-decoration-none fw-semibold"
+                    >
+                      Sign in
+                    </Link>
                   </p>
                 </div>
               </div>

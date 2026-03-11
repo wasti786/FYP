@@ -1,5 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import "../CSS/ExplorePakistan.css";
+
 import heroImage from "../assets/main-image1.png";
 import Hunza from "../assets/hunza/altitfort.jpg";
 import Nagar from "../assets/nagar/hoparglacier1.jpg";
@@ -13,7 +15,6 @@ import Shigar from "../assets/shigar/shigar-fort.jpg";
 import Diamer from "../assets/diamer/fairy-meadows.webp";
 import Roundu from "../assets/roundu/bilamik-valley1.JPG";
 import Deosai from "../assets/top_destinations/IMG_4665.JPG";
-import { CollectionReference } from "firebase/firestore";
 
 const destinations = [
   {
@@ -22,6 +23,8 @@ const destinations = [
     slug: "hunza",
     description:
       "A mountainous valley known for its scenic beauty, apricot farms, and historic forts.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Altit Fort", "Baltit Fort", "Attabad Lake"],
   },
   {
     image: Nagar,
@@ -29,6 +32,8 @@ const destinations = [
     slug: "nagar",
     description:
       "Home to some of the world's highest peaks and traditional villages with rich culture.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Rakaposhi Peak", "Hopar Glacier", "Spantik"],
   },
   {
     image: Gilgit,
@@ -36,6 +41,8 @@ const destinations = [
     slug: "gilgit",
     description:
       "The capital city of Gilgit-Baltistan, offering a blend of natural beauty and urban amenities.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Gilgit River", "Kargah Buddha", "Naltar Valley"],
   },
   {
     image: Astore,
@@ -43,6 +50,8 @@ const destinations = [
     slug: "astore",
     description:
       "Known for its lush meadows, dense forests, and the gateway to Deosai National Park.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Rama Lake", "Chungphar Valley", "Sheosar Lake"],
   },
   {
     image: Skardu,
@@ -50,6 +59,8 @@ const destinations = [
     slug: "skardu",
     description:
       "Famous for its desert, lakes, and proximity to the world's second-highest mountain, K2.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Shangrila Resort", "Satpara Lake", "Kachura Lakes"],
   },
   {
     image: Deosai,
@@ -57,6 +68,8 @@ const destinations = [
     slug: "deosai",
     description:
       "One of the world's highest plateaus, known as 'The Land of Giants' with unique flora and fauna.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Sheosar Lake", "Bara Pani", "Wildlife Sanctuary"],
   },
   {
     image: Ghanche,
@@ -64,6 +77,8 @@ const destinations = [
     slug: "ghanche",
     description:
       "Known for Khaplu Palace, beautiful landscapes, and major peaks like K7.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Khaplu Palace", "Chaqchan Mosque", "Saltoro Valley"],
   },
   {
     image: Ghizer,
@@ -71,6 +86,8 @@ const destinations = [
     slug: "ghizer",
     description:
       "Known for Phander Lake, Shandur Pass, trout fishing, and diverse cultures.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Phander Lake", "Shandur Pass", "Gupis Fort"],
   },
   {
     image: Shigar,
@@ -78,6 +95,8 @@ const destinations = [
     slug: "shigar",
     description:
       "Famous for its valley, wooden mosques, and as the gateway to Baltoro glacier.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Shigar Fort", "Amburik Mosque", "Basha Valley"],
   },
   {
     image: Kharmang,
@@ -85,6 +104,8 @@ const destinations = [
     slug: "kharmang",
     description:
       "A stunning 180-foot waterfall located 60 km away from Skardu town.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Manthokha Falls", "Kharfaq Lake", "Thagas Valley"],
   },
   {
     image: Roundu,
@@ -92,6 +113,8 @@ const destinations = [
     slug: "roundu",
     description:
       "Bilamik Valley lies in Skardu District, surrounded by towering peaks.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Bilamik Valley", "Basha River", "Rock Formations"],
   },
   {
     image: Diamer,
@@ -99,259 +122,254 @@ const destinations = [
     slug: "diamer",
     description:
       "Home to Nanga Parbat and Fairy Meadows, offering breathtaking trekking routes.",
+    province: "Gilgit-Baltistan",
+    highlights: ["Fairy Meadows", "Nanga Parbat", "Beyal Camp"],
   },
 ];
 
 export default function ExplorePakistan() {
   return (
-    <div className="w-full">
-      {/* Hero Section */}
-      <div className="relative w-full h-[60vh]">
-        <img
-          src={heroImage}
-          alt="Explore Gilgit Baltistan"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-center text-center px-4">
-          <h1 className="text-3xl md:text-5xl font-bold text-white">
-            EXPLORE GILGIT BALTISTAN
-          </h1>
-          <p className="mt-4 text-lg md:text-xl text-white-200 max-w-2xl" >
-            Discover the breathtaking landscapes, rich culture, and unique
-            experiences across all districts of Gilgit Baltistan
-          </p>
+    <div className="explore-pakistan-page">
+      {/* Hero Section with Safarnama Style */}
+      <section className="safarnama-hero">
+        <div className="hero-background">
+          <img src={heroImage} alt="Explore Gilgit Baltistan" />
+          <div className="hero-overlay"></div>
         </div>
-      </div>
+        <div className="hero-content">
+          <div className="container">
+            <div className="hero-text">
+              <h1 className="hero-title">
+                Explore <span className="highlight">Gilgit Baltistan</span>
+              </h1>
+              <p className="hero-subtitle">
+                Discover the breathtaking landscapes, rich culture, and unique
+                experiences across all districts of Pakistan's northern paradise
+              </p>
+              <div className="hero-stats">
+                <div className="stat">
+                  <span className="stat-number">12</span>
+                  <span className="stat-label">Districts</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-number">50+</span>
+                  <span className="stat-label">Destinations</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-number">∞</span>
+                  <span className="stat-label">Adventures</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="hero-scroll-indicator">
+          <span>Scroll to Explore</span>
+          <div className="scroll-arrow"></div>
+        </div>
+      </section>
 
       {/* Destinations Grid */}
-      <div className="py-16 max-w-[90%] mx-auto">
-        <h2 className="mb-8 text-center text-2xl font-bold text-gray-800 md:mb-12 lg:text-3xl">
-          All Destinations of Gilgit Baltistan
-        </h2>
-
-        <div className="explore-grid">
-          {destinations.map((d) => (
-            <Link to={`/explore-pakistan/${d.slug}`} key={d.slug} className="explore-card">
-              <img src={d.image} alt={d.title} className="explore-img" />
-              <div className="explore-overlay">
-                <h3>{d.title}</h3>
-                <p>{d.description}</p>
-                <span className="explore-btn">Explore →</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-          {/* Footer */}
-      <footer
-        className="py-5"
-        style={{ backgroundColor: "#132b66", color: "#e5e9f0" } }
-      >
+      <section className="destinations-section">
         <div className="container">
-          <div className="row align-items-start">
-            {/* Logo + About */}
-            <div className="col-lg-4 mb-4">
-              <div className="mb-3">
-                <img
-                  src=""
-                  alt="TravelPlanner AI"
-                  style={{ maxHeight: "60px" }}
-                />
+          <div className="section-header">
+            <h2 className="section-title">Discover Gilgit Baltistan</h2>
+            <p className="section-subtitle">
+              From majestic mountains to serene valleys, explore the hidden gems
+              of Pakistan's crown jewel
+            </p>
+          </div>
+
+          <div className="destinations-grid">
+            {destinations.map((destination, index) => (
+              <article
+                key={destination.slug}
+                className="destination-card"
+                data-aos="fade-up"
+              >
+                <Link
+                  to={`/explore-pakistan/${destination.slug}`}
+                  className="card-link"
+                >
+                  <div className="card-image">
+                    <img src={destination.image} alt={destination.title} />
+                    <div className="card-overlay"></div>
+                    <div className="card-badge">{destination.province}</div>
+                  </div>
+
+                  <div className="card-content">
+                    <div className="card-header">
+                      <h3 className="card-title">{destination.title}</h3>
+                      <div className="card-rating">
+                        <span className="rating-stars">★★★★★</span>
+                        <span className="rating-text">Must Visit</span>
+                      </div>
+                    </div>
+
+                    <p className="card-description">
+                      {destination.description}
+                    </p>
+
+                    <div className="card-highlights">
+                      {destination.highlights.map((highlight, idx) => (
+                        <span key={idx} className="highlight-tag">
+                          #{highlight}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="card-footer">
+                      <span className="explore-cta">
+                        Explore Destination
+                        <svg
+                          className="cta-arrow"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M5 12H19M19 12L12 5M19 12L12 19"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="cta-section">
+        <div className="container">
+          <div className="cta-content">
+            <h2 className="cta-title">Ready for Your Adventure?</h2>
+            <p className="cta-subtitle">
+              Let us help you plan the perfect trip to Gilgit Baltistan with our
+              AI-powered travel planner
+            </p>
+            <div className="cta-buttons">
+              <Link to="/planner" className="btn btn-primary">
+                <i className="fas fa-compass me-2"></i>
+                Start Planning
+              </Link>
+              <Link to="/destination" className="btn btn-outline">
+                <i className="fas fa-map me-2"></i>
+                View All Destinations
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer - Matching Landing Page Style */}
+      <footer className="explore-footer">
+        <div className="footer-container">
+          <div className="footer-content">
+            {/* Brand Section */}
+            <div className="footer-section">
+              <div className="footer-brand">
+                <i className="fas fa-globe-americas"></i>
+                <span className="brand-name">TravelPlanner AI</span>
               </div>
-              <p className="mb-3" style={{ color: "#b0bec5" }}>
+              <p className="footer-description">
                 Your journey to smarter trips begins with us. Discover amazing
                 destinations and plan effortlessly with AI.
               </p>
-              <div className="d-flex gap-3">
-                <a href="#" className="text-light fs-5">
+              <div className="social-links">
+                <a href="#" className="social-link">
                   <i className="fab fa-facebook-f"></i>
                 </a>
-                <a href="#" className="text-light fs-5">
+                <a href="#" className="social-link">
                   <i className="fab fa-instagram"></i>
                 </a>
-                <a href="#" className="text-light fs-5">
-                  <i className="fab fa-x-twitter"></i>
+                <a href="#" className="social-link">
+                  <i className="fab fa-twitter"></i>
                 </a>
-                <a href="#" className="text-light fs-5">
-                  <i className="fab fa-youtube"></i>
+                <a href="#" className="social-link">
+                  <i className="fab fa-linkedin-in"></i>
                 </a>
               </div>
             </div>
 
             {/* Quick Links */}
-            <div className="col-lg-3 mb-4">
-              <h6 className="fw-semibold mb-3 text-light">Quick Links</h6>
-              <ul className="list-unstyled">
+            <div className="footer-section">
+              <h4 className="footer-title">Quick Links</h4>
+              <ul className="footer-links">
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Home
-                  </a>
+                  <Link to="/">Home</Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Photography
-                  </a>
+                  <Link to="/planner">Trip Planner</Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Seasons
-                  </a>
+                  <Link to="/explore-pakistan">Explore Pakistan</Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Stories
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Book Now
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Travel Blog
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    About Us
-                  </a>
+                  <Link to="/about">About Us</Link>
                 </li>
               </ul>
             </div>
 
             {/* Popular Tours */}
-            <div className="col-lg-3 mb-4">
-              <h6 className="fw-semibold mb-3 text-light">Popular Tours</h6>
-              <ul className="list-unstyled">
+            <div className="footer-section">
+              <h4 className="footer-title">Popular Tours</h4>
+              <ul className="footer-links">
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Hunza Valley Explorer
-                  </a>
+                  <a href="#">Hunza Valley Explorer</a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Skardu & Deosai Adventure
-                  </a>
+                  <a href="#">Skardu Adventure</a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Fairy Meadows Trek
-                  </a>
+                  <a href="#">Fairy Meadows Trek</a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    K2 Base Camp Expedition
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Khaplu Valley Cultural Tour
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    style={{ color: "#b0bec5" }}
-                  >
-                    Northern Pakistan Grand Tour
-                  </a>
+                  <a href="#">K2 Base Camp</a>
                 </li>
               </ul>
             </div>
 
-            {/* Contact */}
-            <div className="col-lg-2 mb-4">
-              <h6 className="fw-semibold mb-3 text-light">Contact Us</h6>
-              <p className="mb-2" style={{ color: "#b0bec5" }}>
-                <i className="fas fa-phone-alt me-2"></i> +92 3554713444
-              </p>
-              <p className="mb-2" style={{ color: "#b0bec5" }}>
-                <i className="fas fa-envelope me-2"></i> info@travelplanner.com
-              </p>
-              <p className="mb-0" style={{ color: "#b0bec5" }}>
-                <i className="fas fa-map-marker-alt me-2"></i> Airport Rd,
-                Skardu, Gilgit Baltistan
-              </p>
+            {/* Contact Info */}
+            <div className="footer-section">
+              <h4 className="footer-title">Contact</h4>
+              <div className="contact-info">
+                <div className="contact-item">
+                  <i className="fas fa-phone"></i>
+                  <a href="tel:+923554713444">+92 355 4713444</a>
+                </div>
+                <div className="contact-item">
+                  <i className="fas fa-envelope"></i>
+                  <a href="mailto:info@travelplanner.com">
+                    info@travelplanner.com
+                  </a>
+                </div>
+                <div className="contact-item">
+                  <i className="fas fa-map-marker-alt"></i>
+                  <span>Skardu, Gilgit Baltistan</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <hr className="border-secondary my-4" />
-          <div className="d-flex flex-wrap justify-content-between align-items-center">
-            <p className="mb-0" style={{ color: "#b0bec5" }}>
-              © 2025 TravelPlanner AI. All rights reserved.
-            </p>
-            <div className="d-flex gap-3">
-              <a
-                href="#"
-                className="text-decoration-none"
-                style={{ color: "#b0bec5" }}
-              >
-                Privacy Policy
-              </a>
-              <a
-                href="#"
-                className="text-decoration-none"
-                style={{ color: "#b0bec5" }}
-              >
-                Terms of Service
-              </a>
-              <a
-                href="#"
-                className="text-decoration-none"
-                style={{ color: "#b0bec5" }}
-              >
-                Cookie Policy
-              </a>
+          {/* Footer Bottom */}
+          <div className="footer-bottom">
+            <div className="footer-bottom-content">
+              <p className="copyright">
+                © 2025 TravelPlanner AI. All rights reserved.
+              </p>
+              <div className="footer-legal">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Cookie Policy</a>
+              </div>
             </div>
           </div>
         </div>
