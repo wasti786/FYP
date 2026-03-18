@@ -1,9 +1,13 @@
 
+//OdzvanAPXMDpuYyx1vl_Njl4IQHhYIK2j4bx7CzxDuU
+
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import 'leaflet-control-geocoder/dist/Control.Geocoder.css'; 
+import 'leaflet-control-geocoder'; 
 
 // Fix for default markers in Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -70,6 +74,7 @@ const TripMap = ({
   const routingControlRef = useRef(null);
   const userMarkerRef = useRef(null);
   const activeRouteRef = useRef(null);
+  const distanceControlRef = useRef(null);
   
   const [mapInitialized, setMapInitialized] = useState(false);
   const [defaultPosition, setDefaultPosition] = useState([35.3, 74.3]);
@@ -78,6 +83,25 @@ const TripMap = ({
   const [isLocating, setIsLocating] = useState(true);
   const [showMainRoute, setShowMainRoute] = useState(true);
   const [destinationCoords, setDestinationCoords] = useState(null);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
+  // Function to fetch place image from Unsplash
+  const getPlaceImage = async (placeName) => {
+    try {
+      const response = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(placeName)}&per_page=1&client_id=OdzvanAPXMDpuYyx1vl_Njl4IQHhYIK2j4bx7CzxDuU`
+      );
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        return data.results[0].urls.small;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      return null;
+    }
+  };
 
   // Get user's current location
   useEffect(() => {
@@ -132,6 +156,9 @@ const TripMap = ({
       if (activeRouteRef.current) {
         mapInstanceRef.current?.removeControl(activeRouteRef.current);
       }
+      if (distanceControlRef.current) {
+        mapInstanceRef.current?.removeControl(distanceControlRef.current);
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -153,31 +180,15 @@ const TripMap = ({
     })
       .addTo(mapInstanceRef.current)
       .bindPopup(`
-        <div style="min-width: 150px;">
+        <div style="min-width: 200px;">
           <h4 style="margin: 0 0 5px 0; color: #22c55e;">📍 Your Location</h4>
           <p style="margin: 0; font-size: 12px;">You are here</p>
-          <button onclick="window.flyToUserLocation()" 
-            style="background: #1e3a5f; color: white; border: 1px solid #FFD700; padding: 5px 10px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 5px;">
-            Center on my location
-          </button>
+          <p style="margin: 5px 0; font-size: 11px; color: #666;">
+            Lat: ${userLocation.lat.toFixed(4)}, Lng: ${userLocation.lng.toFixed(4)}
+          </p>
         </div>
       `);
   }, [userLocation, mapInitialized]);
-
-  // Add global function to fly to user location
-  useEffect(() => {
-    window.flyToUserLocation = () => {
-      if (mapInstanceRef.current && userLocation) {
-        mapInstanceRef.current.flyTo([userLocation.lat, userLocation.lng], 15, {
-          duration: 2
-        });
-      }
-    };
-
-    return () => {
-      window.flyToUserLocation = null;
-    };
-  }, [userLocation]);
 
   // Search for destination coordinates
   useEffect(() => {
@@ -211,9 +222,12 @@ const TripMap = ({
           L.marker([lat, lon], { icon: redIcon })
             .addTo(mapInstanceRef.current)
             .bindPopup(`
-              <div style="min-width: 150px;">
+              <div style="min-width: 200px;">
                 <h4 style="margin: 0 0 5px 0; color: #ef4444;">📍 ${destination}</h4>
                 <p style="margin: 0; font-size: 12px;">Your destination</p>
+                <p style="margin: 5px 0; font-size: 11px; color: #666;">
+                  Lat: ${lat.toFixed(4)}, Lng: ${lon.toFixed(4)}
+                </p>
               </div>
             `);
         } else {
@@ -251,13 +265,69 @@ const TripMap = ({
         lineOptions: {
           styles: [{ color: '#3b82f6', weight: 5, opacity: 0.7 }]
         },
-        createMarker: function() { return null; } // Don't create additional markers
+        createMarker: function() { return null; },
+        show: false, // Hide default UI
+        addWaypoints: false,
+        routeDragInterval: 500
       }).addTo(mapInstanceRef.current);
+
+      // Listen for route calculation to get distance and duration
+      routingControlRef.current.on('routesfound', function(e) {
+        const routes = e.routes;
+        const route = routes[0];
+        const distance = (route.summary.totalDistance / 1000).toFixed(1); // km
+        const duration = Math.round(route.summary.totalTime / 60); // minutes
+        
+        setRouteInfo({ distance, duration });
+        
+        // Add distance control
+        if (distanceControlRef.current) {
+          mapInstanceRef.current.removeControl(distanceControlRef.current);
+        }
+        
+        const DistanceControl = L.Control.extend({
+          options: { position: 'bottomleft' },
+          onAdd: function() {
+            const div = L.DomUtil.create('div', 'distance-control');
+            div.innerHTML = `
+              <div style="
+                background: #1e3a5f;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 30px;
+                border: 2px solid #FFD700;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                font-weight: bold;
+                display: flex;
+                gap: 20px;
+              ">
+                <div>
+                  <i class="fas fa-road" style="color: #FFD700; margin-right: 5px;"></i>
+                  <span>${distance} km</span>
+                </div>
+                <div>
+                  <i class="fas fa-clock" style="color: #FFD700; margin-right: 5px;"></i>
+                  <span>${duration} min</span>
+                </div>
+              </div>
+            `;
+            return div;
+          }
+        });
+        
+        distanceControlRef.current = new DistanceControl();
+        distanceControlRef.current.addTo(mapInstanceRef.current);
+      });
     } else {
       if (routingControlRef.current) {
         mapInstanceRef.current.removeControl(routingControlRef.current);
         routingControlRef.current = null;
       }
+      if (distanceControlRef.current) {
+        mapInstanceRef.current.removeControl(distanceControlRef.current);
+        distanceControlRef.current = null;
+      }
+      setRouteInfo(null);
     }
 
   }, [userLocation, destinationCoords, showMainRoute, mapInitialized]);
@@ -271,35 +341,50 @@ const TripMap = ({
 
     const places = itineraryDays[activeDay].places || [];
 
-    places.forEach((place, index) => {
+    places.forEach(async (place, index) => {
       const lat = defaultPosition[0] + (Math.random() - 0.5) * 0.05;
       const lng = defaultPosition[1] + (Math.random() - 0.5) * 0.05;
       
       const icon = index === 0 ? blueIcon : (index === 1 ? goldIcon : redIcon);
       
+      // Fetch place image
+      const imageUrl = await getPlaceImage(place.name);
+      
       const marker = L.marker([lat, lng], { icon })
         .addTo(mapInstanceRef.current)
         .bindPopup(`
-          <div style="min-width: 220px;">
-            <h3 style="margin: 0 0 5px 0; color: #2563eb;">${place.name}</h3>
-            <p style="margin: 0 0 5px 0; font-size: 14px;">${place.description || 'A must-visit location.'}</p>
-            <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
-              <i>📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}</i>
-            </p>
-            <button onclick="window.getDirectionsToPlace(${lat}, ${lng}, '${place.name}')" 
-              style="background: #1e3a5f; color: white; border: 1px solid #FFD700; padding: 8px 12px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 5px;">
-              🚗 Get Directions
-            </button>
-            <button onclick="window.flyToPlace(${lat}, ${lng})" 
-              style="background: #2a4a77; color: white; border: 1px solid #3b5f8c; padding: 5px 10px; border-radius: 5px; cursor: pointer; width: 100%;">
-              👁️ View on Map
-            </button>
+          <div style="min-width: 280px; max-width: 320px;">
+            ${imageUrl ? `
+              <div style="margin: -12px -12px 10px -12px;">
+                <img src="${imageUrl}" alt="${place.name}" 
+                  style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px 8px 0 0;">
+              </div>
+            ` : ''}
+            <h3 style="margin: 0 0 5px 0; color: #2563eb; font-size: 18px;">${place.name}</h3>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563;">${place.description || 'A must-visit location.'}</p>
+            <div style="background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                <i class="fas fa-map-pin"></i> ${lat.toFixed(4)}, ${lng.toFixed(4)}
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              ${userLocation ? `
+                <button onclick="window.getDirectionsToPlace(${lat}, ${lng}, '${place.name}')" 
+                  style="flex: 2; background: #1e3a5f; color: white; border: 1px solid #FFD700; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                  <i class="fas fa-route"></i> Directions
+                </button>
+              ` : ''}
+              <button onclick="window.flyToPlace(${lat}, ${lng})" 
+                style="flex: 1; background: #2a4a77; color: white; border: 1px solid #3b5f8c; padding: 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
           </div>
         `);
 
       markersRef.current.push(marker);
     });
-  }, [activeDay, itineraryDays, defaultPosition, mapInitialized]);
+  }, [activeDay, itineraryDays, defaultPosition, mapInitialized, userLocation]);
 
   // Add global functions for place interactions
   useEffect(() => {
@@ -326,34 +411,71 @@ const TripMap = ({
         lineOptions: {
           styles: [{ color: '#22c55e', weight: 6, opacity: 0.8 }]
         },
-        createMarker: function() { return null; }
+        createMarker: function() { return null; },
+        show: false,
+        addWaypoints: false
       }).addTo(mapInstanceRef.current);
 
-      // Show notification
-      const notification = document.createElement('div');
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #1e3a5f;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 50px;
-        z-index: 1000;
-        border: 2px solid #FFD700;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      `;
-      notification.innerHTML = `
-        <i class="fas fa-route" style="color: #FFD700;"></i>
-        <span>Route to ${name} created</span>
-        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer;">✕</button>
-      `;
-      document.body.appendChild(notification);
-      setTimeout(() => notification.remove(), 5000);
+      // Listen for route calculation
+      activeRouteRef.current.on('routesfound', function(e) {
+        const routes = e.routes;
+        const route = routes[0];
+        const distance = (route.summary.totalDistance / 1000).toFixed(1);
+        const duration = Math.round(route.summary.totalTime / 60);
+        
+        // Show detailed route info
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = `
+          position: fixed;
+          bottom: 30px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #1e3a5f;
+          color: white;
+          padding: 15px 25px;
+          border-radius: 50px;
+          z-index: 1000;
+          border: 2px solid #FFD700;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          display: flex;
+          align-items: center;
+          gap: 25px;
+          font-size: 16px;
+          animation: slideUp 0.3s ease;
+        `;
+        infoDiv.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-location-dot" style="color: #FFD700;"></i>
+            <span>${name}</span>
+          </div>
+          <div style="width: 1px; height: 20px; background: #3b5f8c;"></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-road" style="color: #FFD700;"></i>
+            <span>${distance} km</span>
+          </div>
+          <div style="width: 1px; height: 20px; background: #3b5f8c;"></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-clock" style="color: #FFD700;"></i>
+            <span>${duration} min</span>
+          </div>
+          <button onclick="this.parentElement.remove()" 
+            style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer; font-size: 18px;">
+            ✕
+          </button>
+        `;
+        document.body.appendChild(infoDiv);
+        
+        setTimeout(() => {
+          if (infoDiv.parentElement) infoDiv.remove();
+        }, 10000);
+      });
+
+      // Fly to show both points
+      const bounds = L.latLngBounds([
+        [userLocation.lat, userLocation.lng],
+        [lat, lng]
+      ]);
+      mapInstanceRef.current.flyToBounds(bounds, { padding: [50, 50], duration: 2 });
     };
 
     window.flyToPlace = (lat, lng) => {
@@ -407,16 +529,30 @@ const TripMap = ({
 
         mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 2 });
 
+        // Fetch place image
+        const imageUrl = await getPlaceImage(selectedActivity.name);
+
         const highlightMarker = L.marker([lat, lng], { icon: redIcon })
           .addTo(mapInstanceRef.current)
           .bindPopup(`
-            <div style="min-width: 220px;">
-              <h3 style="margin: 0 0 5px 0; color: #dc2626;">📍 ${selectedActivity.name}</h3>
-              <p style="margin: 0 0 5px 0; font-size: 14px;">${selectedActivity.description || 'Selected location'}</p>
+            <div style="min-width: 280px; max-width: 320px;">
+              ${imageUrl ? `
+                <div style="margin: -12px -12px 10px -12px;">
+                  <img src="${imageUrl}" alt="${selectedActivity.name}" 
+                    style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px 8px 0 0;">
+                </div>
+              ` : ''}
+              <h3 style="margin: 0 0 5px 0; color: #dc2626; font-size: 18px;">📍 ${selectedActivity.name}</h3>
+              <p style="margin: 0 0 10px 0; font-size: 14px; color: #4b5563;">${selectedActivity.description || 'Selected location'}</p>
+              <div style="background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                  <i class="fas fa-map-pin"></i> ${lat.toFixed(4)}, ${lng.toFixed(4)}
+                </p>
+              </div>
               ${userLocation ? `
                 <button onclick="window.getDirectionsToPlace(${lat}, ${lng}, '${selectedActivity.name}')" 
-                  style="background: #1e3a5f; color: white; border: 1px solid #FFD700; padding: 8px 12px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px;">
-                  🚗 Get Directions from Your Location
+                  style="width: 100%; background: #1e3a5f; color: white; border: 1px solid #FFD700; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                  <i class="fas fa-route"></i> Get Directions from Your Location
                 </button>
               ` : ''}
             </div>
@@ -427,7 +563,7 @@ const TripMap = ({
           if (mapInstanceRef.current) {
             highlightMarker.remove();
           }
-        }, 10000);
+        }, 15000);
 
       } catch (error) {
         console.error("Error focusing on place:", error);
@@ -465,6 +601,20 @@ const TripMap = ({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {/* Add animation styles */}
+      <style>{`
+        @keyframes slideUp {
+          from {
+            transform: translate(-50%, 100%);
+            opacity: 0;
+          }
+          to {
+            transform: translate(-50%, 0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
       {/* Location status overlay */}
       {isLocating && (
         <div style={{
