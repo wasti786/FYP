@@ -19,7 +19,6 @@ import MapTest from "./pages/MapTest";
 import TripMap from "./components/TripMap";
 
 
-
 import "./App.css";
 
 function App() {
