@@ -28,7 +28,6 @@ export default function Navbar() {
   };
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
-  
   useEffect(() => {
     if (!currentUser) return setUserData(null);
 
@@ -47,13 +46,12 @@ export default function Navbar() {
           });
         }
       },
-      (error) => console.error("Error listening to user data:", error)
+      (error) => console.error("Error listening to user data:", error),
     );
 
     return () => unsubscribe();
   }, [currentUser]);
 
-  
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -78,7 +76,6 @@ export default function Navbar() {
   return (
     <nav className="professional-navbar">
       <div className="nav-container">
-        
         <Link to="/" className="nav-brand" onClick={closeAll}>
           <div className="brand-logo">
             <i className="fas fa-globe-americas"></i>
@@ -88,7 +85,6 @@ export default function Navbar() {
           </span>
         </Link>
 
-        
         <div className="nav-links">
           <Link
             to="/"
@@ -117,10 +113,16 @@ export default function Navbar() {
             Explore GB
           </Link>
           <Link
+            to="/travel-resources"
+            className={`nav-link ${isActiveRoute("/travel-resources") ? "active" : ""}`}
+            onClick={closeAll}
+          >
+            <i className="fas fa-book-open nav-icon"></i>
+            Travel Guide GB
+          </Link>
+          <Link
             to="/about-us"
-            className={`nav-link ${
-              isActiveRoute("/about-us") ? "active" : ""
-            }`}
+            className={`nav-link ${isActiveRoute("/about-us") ? "active" : ""}`}
             onClick={closeAll}
           >
             <i className="fas fa-info-circle nav-icon"></i>
@@ -175,7 +177,11 @@ export default function Navbar() {
 
                   <div className="dropdown-divider"></div>
 
-                  <Link to="/profile" className="dropdown-item" onClick={closeAll}>
+                  <Link
+                    to="/profile"
+                    className="dropdown-item"
+                    onClick={closeAll}
+                  >
                     <i className="fas fa-user-circle"></i>
                     <span>My Profile</span>
                   </Link>
@@ -185,14 +191,21 @@ export default function Navbar() {
                     <span>Help</span>
                   </Link>
 
-                  <Link to="/settings" className="dropdown-item" onClick={closeAll}>
+                  <Link
+                    to="/settings"
+                    className="dropdown-item"
+                    onClick={closeAll}
+                  >
                     <i className="fas fa-cog"></i>
                     <span>Settings</span>
                   </Link>
 
                   <div className="dropdown-divider"></div>
 
-                  <button onClick={handleLogout} className="dropdown-item logout-item">
+                  <button
+                    onClick={handleLogout}
+                    className="dropdown-item logout-item"
+                  >
                     <i className="fas fa-sign-out-alt"></i>
                     <span>Sign Out</span>
                   </button>
@@ -204,13 +217,18 @@ export default function Navbar() {
 
         {/* Mobile Menu Button */}
         <button className="mobile-menu-btn" onClick={toggleMobileMenu}>
-          <span className={`menu-bar ${isMobileMenuOpen ? "bar-1" : ""}`}></span>
-          <span className={`menu-bar ${isMobileMenuOpen ? "bar-2" : ""}`}></span>
-          <span className={`menu-bar ${isMobileMenuOpen ? "bar-3" : ""}`}></span>
+          <span
+            className={`menu-bar ${isMobileMenuOpen ? "bar-1" : ""}`}
+          ></span>
+          <span
+            className={`menu-bar ${isMobileMenuOpen ? "bar-2" : ""}`}
+          ></span>
+          <span
+            className={`menu-bar ${isMobileMenuOpen ? "bar-3" : ""}`}
+          ></span>
         </button>
       </div>
 
-      
       <div className={`mobile-menu ${isMobileMenuOpen ? "active" : ""}`}>
         <div className="mobile-menu-content">
           <Link
@@ -240,6 +258,15 @@ export default function Navbar() {
           >
             <i className="fas fa-mountain"></i>
             Explore Pakistan
+          </Link>
+
+          <Link
+            to="/travel-resources"
+            className={`mobile-nav-link ${isActiveRoute("/travel-resources") ? "active" : ""}`}
+            onClick={closeAll}
+          >
+            <i className="fas fa-book-open"></i>
+            <span>Travel Guide GB</span>
           </Link>
           <Link
             to="/about-us"
@@ -278,7 +305,11 @@ export default function Navbar() {
                   <p>{displayEmail}</p>
                 </div>
               </div>
-              <Link to="/profile" className="mobile-nav-link" onClick={closeAll}>
+              <Link
+                to="/profile"
+                className="mobile-nav-link"
+                onClick={closeAll}
+              >
                 <i className="fas fa-user-circle"></i>
                 My Profile
               </Link>

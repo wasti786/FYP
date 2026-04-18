@@ -30,7 +30,7 @@
 //   });
 
 //   const [message, setMessage] = useState("");
-//   const [savedTrips, setSavedTrips] = useState([]); // This will store trips from savedTrips collection
+//   const [savedTrips, setSavedTrips] = useState([]);
 //   const [loading, setLoading] = useState(false);
 //   const [activeTab, setActiveTab] = useState("plan");
 //   const [editingTrip, setEditingTrip] = useState(null);
@@ -65,30 +65,24 @@
 
 //   // Handle AI Plan Generation
 //   const handleGeneratePlan = () => {
-//     // Validate all required fields
 //     const errors = [];
 
 //     if (!form.destination?.trim()) {
 //       errors.push("Destination is required");
 //     }
-
 //     if (!form.startDate) {
 //       errors.push("Start date is required");
 //     }
-
 //     if (!form.endDate) {
 //       errors.push("End date is required");
 //     }
-
 //     if (!form.interests) {
 //       errors.push("Please select your interests");
 //     }
-
 //     if (!form.travelers) {
 //       errors.push("Please select number of travelers");
 //     }
 
-//     // Validate date logic
 //     if (form.startDate && form.endDate) {
 //       const start = new Date(form.startDate);
 //       const end = new Date(form.endDate);
@@ -110,43 +104,110 @@
 //       travelers: form.travelers,
 //     };
 
-//     // Save inputs locally for persistence
 //     localStorage.setItem("tripInput", JSON.stringify(tripData));
-
-//     // Navigate to AI generation page
 //     navigate("/generate-plan", { state: tripData });
 //   };
 
-//   // Fetch saved trips from the savedTrips collection (not the old trips collection)
+//   // Fetch saved trips from Firebase
 //   const fetchSavedTrips = async () => {
-//     if (!currentUser) return;
+//     if (!currentUser) {
+//       console.log("No user logged in");
+//       return;
+//     }
     
 //     try {
 //       setLoading(true);
+//       console.log("Fetching trips for user:", currentUser.uid);
+      
+//       // Query with userId filter - orderBy will work once index is created
+//       // If index is still building, this will work without orderBy
 //       const q = query(
-//         collection(db, "savedTrips"), // Using savedTrips collection
+//         collection(db, "savedTrips"),
 //         where("userId", "==", currentUser.uid),
 //         orderBy("savedAt", "desc")
 //       );
       
 //       const querySnapshot = await getDocs(q);
 //       const trips = [];
+      
 //       querySnapshot.forEach((docSnap) => {
-//         trips.push({ id: docSnap.id, ...docSnap.data() });
+//         const data = docSnap.data();
+//         trips.push({ 
+//           id: docSnap.id, 
+//           ...data 
+//         });
 //       });
+      
+//       console.log("Total trips found:", trips.length);
 //       setSavedTrips(trips);
+      
 //     } catch (err) {
 //       console.error("Error fetching saved trips:", err);
-//       setMessage("Error fetching your trips.");
+      
+//       // If index error, try without orderBy
+//       if (err.code === 'failed-precondition' || err.message.includes('index')) {
+//         console.log("Index building, trying without sorting...");
+//         try {
+//           const q = query(
+//             collection(db, "savedTrips"),
+//             where("userId", "==", currentUser.uid)
+//           );
+//           const querySnapshot = await getDocs(q);
+//           const trips = [];
+          
+//           querySnapshot.forEach((docSnap) => {
+//             trips.push({ id: docSnap.id, ...docSnap.data() });
+//           });
+          
+//           // Sort manually
+//           trips.sort((a, b) => {
+//             if (a.savedAt > b.savedAt) return -1;
+//             if (a.savedAt < b.savedAt) return 1;
+//             return 0;
+//           });
+          
+//           console.log("Total trips found (manual sort):", trips.length);
+//           setSavedTrips(trips);
+//         } catch (fallbackErr) {
+//           console.error("Fallback also failed:", fallbackErr);
+//           setMessage("Error fetching your trips. Please create Firebase index.");
+//         }
+//       } else {
+//         setMessage("Error fetching your trips.");
+//       }
 //     } finally {
 //       setLoading(false);
 //     }
 //   };
 
 //   // Handle viewing a saved trip
-//   const handleViewTrip = (trip) => {
-//     navigate('/generate-plan', { state: trip });
+// const handleViewTrip = (trip) => {
+//   console.log("Viewing saved trip:", trip);
+  
+//   // Prepare the data structure - PASS THE FULL PLAN
+//   const tripPayload = {
+//     destination: trip.destination,
+//     startDate: trip.startDate,
+//     endDate: trip.endDate,
+//     travelers: trip.travelers,
+//     budget: trip.budgetLevel || trip.budget || "Mid-range",
+//     preferences: trip.preferences || trip.interests || "Travel",
+    
+//     // CRITICAL: Pass the saved plan
+//     plan: {
+//       days: trip.days || [],
+//       hotels: trip.hotels || [],
+//       travelTips: trip.travelTips || [],
+//       budget: trip.budget || null
+//     },
+    
+//     // Flag to indicate this is a saved trip  
+//     isSavedTrip: true
 //   };
+  
+//   console.log("Navigating with saved plan:", tripPayload.plan.days?.length, "days");
+//   navigate('/generate-plan', { state: tripPayload });
+// };
 
 //   // Handle deleting a saved trip
 //   const handleDeleteTrip = async (tripId) => {
@@ -162,15 +223,6 @@
 //     }
 //   };
 
-//   // Check URL for tab parameter on mount and when URL changes
-//   useEffect(() => {
-//     const params = new URLSearchParams(window.location.search);
-//     const tab = params.get('tab');
-//     if (tab === 'saved') {
-//       setActiveTab('saved');
-//     }
-//   }, [window.location.search]);
-
 //   // Fetch trips when user changes or tab becomes saved
 //   useEffect(() => {
 //     if (currentUser && activeTab === 'saved') {
@@ -178,7 +230,16 @@
 //     }
 //   }, [currentUser, activeTab]);
 
-//   // Your existing handleSave function (kept for backward compatibility)
+//   // Check URL for tab parameter
+//   useEffect(() => {
+//     const params = new URLSearchParams(window.location.search);
+//     const tab = params.get('tab');
+//     if (tab === 'saved') {
+//       setActiveTab('saved');
+//     }
+//   }, []);
+
+//   // Your existing handleSave function (for the old trips collection)
 //   const handleSave = async () => {
 //     if (!currentUser) {
 //       setMessage("Please login to save trips.");
@@ -206,6 +267,51 @@
 //       setMessage("Error: " + err.message);
 //     } finally {
 //       setLoading(false);
+//     }
+//   };
+
+//   const handleEditClick = (trip) => {
+//     setEditingTrip(trip.id);
+//     setEditForm({ ...trip });
+//   };
+
+//   const handleEditChange = (e) => {
+//     setEditForm({ ...editForm, [e.target.name]: e.target.value });
+//   };
+
+//   const handleCancelEdit = () => {
+//     setEditingTrip(null);
+//     setEditForm({});
+//   };
+
+//   const handleUpdate = async (id) => {
+//     try {
+//       const tripRef = doc(db, "trips", id);
+//       await updateDoc(tripRef, {
+//         destination: editForm.destination,
+//         startDate: editForm.startDate,
+//         endDate: editForm.endDate,
+//         interests: editForm.interests,
+//         travelers: editForm.travelers,
+//       });
+//       setMessage("Trip updated successfully!");
+//       setEditingTrip(null);
+//       fetchSavedTrips();
+//     } catch (err) {
+//       console.error("Error updating trip:", err);
+//       setMessage("Error updating trip.");
+//     }
+//   };
+
+//   const handleDelete = async (id) => {
+//     if (!window.confirm("Are you sure you want to delete this trip?")) return;
+//     try {
+//       await deleteDoc(doc(db, "trips", id));
+//       setMessage("Trip deleted successfully!");
+//       fetchSavedTrips();
+//     } catch (err) {
+//       console.error("Error deleting trip:", err);
+//       setMessage("Error deleting trip.");
 //     }
 //   };
 
@@ -294,7 +400,7 @@
 //                   />
 //                 </div>
 
-//                 {/* Interests & Travelers - Updated to dropdowns */}
+//                 {/* Interests & Travelers */}
 //                 <div className="planner-form-group">
 //                   <label className="planner-label">Interests</label>
 //                   <select
@@ -346,7 +452,7 @@
 //                 Generate AI Travel Plan
 //               </button>
 
-//               {/* Optional Save Button for logged-in users */}
+//               {/* Optional Save Button */}
 //               {currentUser && (
 //                 <button
 //                   onClick={handleSave}
@@ -361,8 +467,7 @@
 //                     border: "none",
 //                     color: "white",
 //                     fontSize: "16px",
-//                     cursor:
-//                       loading || !form.destination ? "not-allowed" : "pointer",
+//                     cursor: loading || !form.destination ? "not-allowed" : "pointer",
 //                     opacity: loading || !form.destination ? 0.7 : 1,
 //                     display: "flex",
 //                     alignItems: "center",
@@ -400,7 +505,7 @@
 //           </div>
 //         )}
 
-//         {/* Saved Trips Section - UPDATED to show trips from savedTrips collection */}
+//         {/* Saved Trips Section */}
 //         {activeTab === "saved" && (
 //           <div className="saved-trips-section">
 //             {loading ? (
@@ -411,7 +516,7 @@
 //             ) : savedTrips.length > 0 ? (
 //               <div className="saved-trips-grid" style={{
 //                 display: 'grid',
-//                 gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+//                 gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
 //                 gap: '20px'
 //               }}>
 //                 {savedTrips.map((trip) => (
@@ -424,25 +529,22 @@
 //                       padding: '20px',
 //                       border: '1px solid #2a4a77',
 //                       transition: 'all 0.3s ease',
-//                       cursor: 'pointer',
-//                       position: 'relative'
+//                       cursor: 'pointer'
 //                     }}
 //                     onClick={() => handleViewTrip(trip)}
 //                     onMouseEnter={(e) => {
 //                       e.currentTarget.style.transform = 'translateY(-5px)';
 //                       e.currentTarget.style.borderColor = '#FFD700';
-//                       e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
 //                     }}
 //                     onMouseLeave={(e) => {
 //                       e.currentTarget.style.transform = 'translateY(0)';
 //                       e.currentTarget.style.borderColor = '#2a4a77';
-//                       e.currentTarget.style.boxShadow = 'none';
 //                     }}
 //                   >
 //                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-//                       <h3 style={{ color: 'white', marginBottom: '10px', fontSize: '20px' }}>
+//                       <h3 style={{ color: 'white', marginBottom: '10px', fontSize: '18px' }}>
 //                         <i className="fas fa-map-marker-alt" style={{ color: '#FFD700', marginRight: '8px' }}></i>
-//                         {trip.destination || trip.payload?.destination}
+//                         {trip.destination || trip.tripName || 'My Trip'}
 //                       </h3>
 //                       <button
 //                         onClick={(e) => {
@@ -454,7 +556,7 @@
 //                           border: 'none',
 //                           color: '#ef4444',
 //                           cursor: 'pointer',
-//                           fontSize: '18px',
+//                           fontSize: '16px',
 //                           padding: '5px'
 //                         }}
 //                       >
@@ -462,19 +564,20 @@
 //                       </button>
 //                     </div>
                     
-//                     <p style={{ color: '#a3c6ff', marginBottom: '8px' }}>
+//                     <p style={{ color: '#a3c6ff', marginBottom: '8px', fontSize: '14px' }}>
 //                       <i className="fas fa-calendar" style={{ color: '#FFD700', marginRight: '8px', width: '16px' }}></i>
-//                       {trip.startDate || trip.payload?.startDate} → {trip.endDate || trip.payload?.endDate}
+//                       {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : 'Date not set'} → 
+//                       {trip.endDate ? new Date(trip.endDate).toLocaleDateString() : 'Date not set'}
 //                     </p>
                     
-//                     <p style={{ color: '#a3c6ff', marginBottom: '8px' }}>
+//                     <p style={{ color: '#a3c6ff', marginBottom: '8px', fontSize: '14px' }}>
 //                       <i className="fas fa-users" style={{ color: '#FFD700', marginRight: '8px', width: '16px' }}></i>
-//                       {trip.travelers || trip.payload?.travelers}
+//                       {trip.travelers || 'Not specified'}
 //                     </p>
                     
-//                     <p style={{ color: '#a3c6ff', marginBottom: '15px' }}>
+//                     <p style={{ color: '#a3c6ff', marginBottom: '15px', fontSize: '14px' }}>
 //                       <i className="fas fa-tag" style={{ color: '#FFD700', marginRight: '8px', width: '16px' }}></i>
-//                       {trip.budget || trip.payload?.budget || 'Budget not specified'}
+//                       {trip.budgetLevel || trip.budget || 'Budget not specified'}
 //                     </p>
                     
 //                     <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -485,7 +588,7 @@
 //                         borderRadius: '15px',
 //                         fontSize: '12px'
 //                       }}>
-//                         {trip.days?.length || trip.plan?.days?.length || 0} days
+//                         {trip.days?.length || 0} days
 //                       </span>
 //                       <span style={{
 //                         background: '#1e3a5f',
@@ -494,13 +597,13 @@
 //                         borderRadius: '15px',
 //                         fontSize: '12px'
 //                       }}>
-//                         {trip.hotels?.length || trip.plan?.hotels?.length || 0} hotels
+//                         {trip.hotels?.length || 0} hotels
 //                       </span>
 //                     </div>
 
 //                     {trip.preferences && (
-//                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-//                         {trip.preferences.split(',').map((pref, idx) => (
+//                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
+//                         {trip.preferences.split(',').slice(0, 3).map((pref, idx) => (
 //                           <span key={idx} style={{
 //                             background: '#0a1929',
 //                             color: '#a3c6ff',
@@ -522,7 +625,7 @@
 //                       }}
 //                       style={{
 //                         width: '100%',
-//                         marginTop: '15px',
+//                         marginTop: '10px',
 //                         padding: '10px',
 //                         background: '#1e3a5f',
 //                         border: '1px solid #3b5f8c',
@@ -557,8 +660,7 @@
 //                 </div>
 //                 <h3 className="empty-state-title">No Trips Planned Yet</h3>
 //                 <p className="empty-state-text">
-//                   Start planning your first adventure and let AI create the
-//                   perfect itinerary for you.
+//                   Start planning your first adventure and let AI create the perfect itinerary for you.
 //                 </p>
 //                 <button
 //                   className="empty-state-btn"
@@ -574,7 +676,9 @@
 //     </div>
 //   );
 // }
-import React, { useState, useEffect } from "react";
+
+
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -602,37 +706,192 @@ export default function Planner() {
     endDate: "",
     interests: "",
     travelers: "",
+    budget: saved.budget || "", // ✅ BUDGET ADDED
   });
+
+  // --- Autocomplete State ---
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const suggestionRef = useRef(null);
+  const inputRef = useRef(null);
+  // -------------------------
 
   const [message, setMessage] = useState("");
   const [savedTrips, setSavedTrips] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("plan");
-  const [editingTrip, setEditingTrip] = useState(null);
-  const [editForm, setEditForm] = useState({});
 
   // Dropdown options
   const interestOptions = [
-    "Adventure",
-    "Relaxation",
-    "Culture",
-    "Beach",
-    "Mountains",
-    "City Tour",
-    "History",
-    "Nature",
-    "Wildlife",
-    "Sports",
-    "Luxury",
+    "Adventure", "Relaxation", "Culture", "Beach", "Mountains",
+    "City Tour", "History", "Nature", "Wildlife", "Sports", "Luxury",
   ];
 
   const travelerOptions = [
-    "Solo Travel",
-    "Couple (2 people)",
-    "Family (3-4 people)",
-    "Group (5-8 people)",
-    "Large Group (9+ people)",
+    "Solo Travel", "Couple (2 people)", "Family (3-4 people)",
+    "Group (5-8 people)", "Large Group (9+ people)",
   ];
+
+  // ✅ BUDGET OPTIONS ADDED
+  const budgetOptions = [
+    "💰 Budget (Under $500)",
+    "💵 Economy ($500 - $1,000)",
+    "💳 Standard ($1,000 - $2,000)",
+    "💎 Premium ($2,000 - $4,000)",
+    "👑 Luxury ($4,000+)",
+  ];
+
+  // --- Fetch Countries from REST Countries API ---
+  const fetchCountries = async (query) => {
+    try {
+      const response = await fetch(
+        `https://restcountries.com/v3.1/name/${query}?fields=name,flags`
+      );
+      if (!response.ok) return [];
+      const data = await response.json();
+      
+      const filtered = data.filter(country => 
+        country.name.common.toLowerCase().startsWith(query.toLowerCase())
+      );
+      
+      return filtered.slice(0, 5).map((c) => ({
+        name: c.name.common,
+        type: "country",
+        display: `🌍 ${c.name.common}`,
+      }));
+    } catch (error) {
+      console.error("Error fetching countries:", error);
+      return [];
+    }
+  };
+
+  // --- Fetch Cities from OpenWeatherMap Geo API ---
+  const fetchCities = async (query) => {
+    if (!query || query.length < 2) return [];
+    
+    try {
+      const response = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=10&appid=bd5e378503939ddaee76f12ad7a97608`
+      );
+      
+      if (!response.ok) {
+        return await fetchCitiesFallback(query);
+      }
+      
+      const data = await response.json();
+      
+      if (!data || data.length === 0) {
+        return await fetchCitiesFallback(query);
+      }
+      
+      return data.map((city) => ({
+        name: city.name,
+        country: city.country,
+        state: city.state || "",
+        type: "city",
+        display: city.state 
+          ? `🏙️ ${city.name}, ${city.state}, ${city.country}`
+          : `🏙️ ${city.name}, ${city.country}`,
+      }));
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      return await fetchCitiesFallback(query);
+    }
+  };
+
+  // --- Fallback city search ---
+  const fetchCitiesFallback = async (query) => {
+    try {
+      const response = await fetch(
+        `https://public.opendatasoft.com/api/records/1.0/search/?dataset=geonames-all-cities-with-a-population-1000&q=${encodeURIComponent(query)}&rows=8&sort=population`
+      );
+      
+      if (!response.ok) return [];
+      
+      const data = await response.json();
+      
+      if (!data.records || data.records.length === 0) return [];
+      
+      return data.records.map((record) => {
+        const fields = record.fields;
+        return {
+          name: fields.name,
+          country: fields.country_name || fields.cou_name_en || "Unknown",
+          type: "city",
+          display: `🏙️ ${fields.name}, ${fields.country_name || fields.cou_name_en || "Unknown"}`,
+        };
+      });
+    } catch (error) {
+      console.error("Error in fallback city search:", error);
+      return [];
+    }
+  };
+
+  // --- Main search function ---
+  const fetchSuggestions = async (query) => {
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsLoadingSuggestions(true);
+
+    try {
+      const [cities, countries] = await Promise.all([
+        fetchCities(query),
+        fetchCountries(query),
+      ]);
+      
+      const combined = [...cities, ...countries];
+      
+      const unique = combined.filter(
+        (item, index, self) => index === self.findIndex((t) => t.name === item.name)
+      );
+      
+      setSuggestions(unique);
+      setShowSuggestions(unique.length > 0);
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+      setSuggestions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  // --- Handle destination typing ---
+  const handleDestinationChange = (e) => {
+    const value = e.target.value;
+    setForm({ ...form, destination: value });
+    fetchSuggestions(value);
+  };
+
+  // --- Select a suggestion ---
+  const selectSuggestion = (suggestion) => {
+    setForm({ ...form, destination: suggestion.name });
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  // --- Click outside handler ---
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionRef.current &&
+        !suggestionRef.current.contains(event.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -642,28 +901,17 @@ export default function Planner() {
   const handleGeneratePlan = () => {
     const errors = [];
 
-    if (!form.destination?.trim()) {
-      errors.push("Destination is required");
-    }
-    if (!form.startDate) {
-      errors.push("Start date is required");
-    }
-    if (!form.endDate) {
-      errors.push("End date is required");
-    }
-    if (!form.interests) {
-      errors.push("Please select your interests");
-    }
-    if (!form.travelers) {
-      errors.push("Please select number of travelers");
-    }
+    if (!form.destination?.trim()) errors.push("Destination is required");
+    if (!form.startDate) errors.push("Start date is required");
+    if (!form.endDate) errors.push("End date is required");
+    if (!form.interests) errors.push("Please select your interests");
+    if (!form.travelers) errors.push("Please select number of travelers");
+    if (!form.budget) errors.push("Please select your budget"); // ✅ BUDGET VALIDATION
 
     if (form.startDate && form.endDate) {
       const start = new Date(form.startDate);
       const end = new Date(form.endDate);
-      if (end <= start) {
-        errors.push("End date must be after start date");
-      }
+      if (end <= start) errors.push("End date must be after start date");
     }
 
     if (errors.length > 0) {
@@ -677,6 +925,7 @@ export default function Planner() {
       endDate: form.endDate,
       interests: form.interests,
       travelers: form.travelers,
+      budget: form.budget, // ✅ BUDGET INCLUDED
     };
 
     localStorage.setItem("tripInput", JSON.stringify(tripData));
@@ -685,142 +934,76 @@ export default function Planner() {
 
   // Fetch saved trips from Firebase
   const fetchSavedTrips = async () => {
-    if (!currentUser) {
-      console.log("No user logged in");
-      return;
-    }
-    
+    if (!currentUser) return;
+
     try {
       setLoading(true);
-      console.log("Fetching trips for user:", currentUser.uid);
-      
-      // Query with userId filter - orderBy will work once index is created
-      // If index is still building, this will work without orderBy
       const q = query(
         collection(db, "savedTrips"),
         where("userId", "==", currentUser.uid),
         orderBy("savedAt", "desc")
       );
-      
       const querySnapshot = await getDocs(q);
       const trips = [];
-      
       querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        trips.push({ 
-          id: docSnap.id, 
-          ...data 
-        });
+        trips.push({ id: docSnap.id, ...docSnap.data() });
       });
-      
-      console.log("Total trips found:", trips.length);
       setSavedTrips(trips);
-      
     } catch (err) {
       console.error("Error fetching saved trips:", err);
-      
-      // If index error, try without orderBy
-      if (err.code === 'failed-precondition' || err.message.includes('index')) {
-        console.log("Index building, trying without sorting...");
-        try {
-          const q = query(
-            collection(db, "savedTrips"),
-            where("userId", "==", currentUser.uid)
-          );
-          const querySnapshot = await getDocs(q);
-          const trips = [];
-          
-          querySnapshot.forEach((docSnap) => {
-            trips.push({ id: docSnap.id, ...docSnap.data() });
-          });
-          
-          // Sort manually
-          trips.sort((a, b) => {
-            if (a.savedAt > b.savedAt) return -1;
-            if (a.savedAt < b.savedAt) return 1;
-            return 0;
-          });
-          
-          console.log("Total trips found (manual sort):", trips.length);
-          setSavedTrips(trips);
-        } catch (fallbackErr) {
-          console.error("Fallback also failed:", fallbackErr);
-          setMessage("Error fetching your trips. Please create Firebase index.");
-        }
-      } else {
-        setMessage("Error fetching your trips.");
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle viewing a saved trip
-const handleViewTrip = (trip) => {
-  console.log("Viewing saved trip:", trip);
-  
-  // Prepare the data structure - PASS THE FULL PLAN
-  const tripPayload = {
-    destination: trip.destination,
-    startDate: trip.startDate,
-    endDate: trip.endDate,
-    travelers: trip.travelers,
-    budget: trip.budgetLevel || trip.budget || "Mid-range",
-    preferences: trip.preferences || trip.interests || "Travel",
-    
-    // CRITICAL: Pass the saved plan
-    plan: {
-      days: trip.days || [],
-      hotels: trip.hotels || [],
-      travelTips: trip.travelTips || [],
-      budget: trip.budget || null
-    },
-    
-    // Flag to indicate this is a saved trip  
-    isSavedTrip: true
+  const handleViewTrip = (trip) => {
+    const tripPayload = {
+      destination: trip.destination,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      travelers: trip.travelers,
+      budget: trip.budgetLevel || trip.budget || "Mid-range",
+      preferences: trip.preferences || trip.interests || "Travel",
+      plan: {
+        days: trip.days || [],
+        hotels: trip.hotels || [],
+        travelTips: trip.travelTips || [],
+        budget: trip.budget || null,
+      },
+      isSavedTrip: true,
+    };
+    navigate("/generate-plan", { state: tripPayload });
   };
-  
-  console.log("Navigating with saved plan:", tripPayload.plan.days?.length, "days");
-  navigate('/generate-plan', { state: tripPayload });
-};
 
-  // Handle deleting a saved trip
   const handleDeleteTrip = async (tripId) => {
     if (!window.confirm("Are you sure you want to delete this trip?")) return;
-    
     try {
       await deleteDoc(doc(db, "savedTrips", tripId));
       setMessage("Trip deleted successfully!");
-      fetchSavedTrips(); // Refresh the list
+      fetchSavedTrips();
     } catch (err) {
       console.error("Error deleting trip:", err);
       setMessage("Error deleting trip.");
     }
   };
 
-  // Fetch trips when user changes or tab becomes saved
   useEffect(() => {
-    if (currentUser && activeTab === 'saved') {
+    if (currentUser && activeTab === "saved") {
       fetchSavedTrips();
     }
   }, [currentUser, activeTab]);
 
-  // Check URL for tab parameter
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'saved') {
-      setActiveTab('saved');
-    }
+    const tab = params.get("tab");
+    if (tab === "saved") setActiveTab("saved");
   }, []);
 
-  // Your existing handleSave function (for the old trips collection)
   const handleSave = async () => {
     if (!currentUser) {
       setMessage("Please login to save trips.");
       return;
     }
-
     setLoading(true);
     try {
       await addDoc(collection(db, "trips"), {
@@ -828,7 +1011,6 @@ const handleViewTrip = (trip) => {
         ...form,
         createdAt: serverTimestamp(),
       });
-
       setMessage("Trip saved successfully!");
       setForm({
         destination: "",
@@ -836,6 +1018,7 @@ const handleViewTrip = (trip) => {
         endDate: "",
         interests: "",
         travelers: "",
+        budget: "", // ✅ RESET BUDGET
       });
       localStorage.removeItem("tripInput");
     } catch (err) {
@@ -845,55 +1028,9 @@ const handleViewTrip = (trip) => {
     }
   };
 
-  const handleEditClick = (trip) => {
-    setEditingTrip(trip.id);
-    setEditForm({ ...trip });
-  };
-
-  const handleEditChange = (e) => {
-    setEditForm({ ...editForm, [e.target.name]: e.target.value });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTrip(null);
-    setEditForm({});
-  };
-
-  const handleUpdate = async (id) => {
-    try {
-      const tripRef = doc(db, "trips", id);
-      await updateDoc(tripRef, {
-        destination: editForm.destination,
-        startDate: editForm.startDate,
-        endDate: editForm.endDate,
-        interests: editForm.interests,
-        travelers: editForm.travelers,
-      });
-      setMessage("Trip updated successfully!");
-      setEditingTrip(null);
-      fetchSavedTrips();
-    } catch (err) {
-      console.error("Error updating trip:", err);
-      setMessage("Error updating trip.");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this trip?")) return;
-    try {
-      await deleteDoc(doc(db, "trips", id));
-      setMessage("Trip deleted successfully!");
-      fetchSavedTrips();
-    } catch (err) {
-      console.error("Error deleting trip:", err);
-      setMessage("Error deleting trip.");
-    }
-  };
-
   return (
     <div className="planner-container">
       <div className="container">
-        {/* Header */}
         <div className="planner-header">
           <h1 className="planner-title">Plan Your Next Adventure</h1>
           <p className="planner-subtitle">
@@ -901,7 +1038,6 @@ const handleViewTrip = (trip) => {
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="planner-tabs">
           <ul className="planner-tab-list">
             <li className="planner-tab-item">
@@ -928,7 +1064,6 @@ const handleViewTrip = (trip) => {
           </ul>
         </div>
 
-        {/* Plan New Trip Section */}
         {activeTab === "plan" && (
           <div className="plan-trip-card">
             <div className="plan-trip-header">
@@ -939,22 +1074,107 @@ const handleViewTrip = (trip) => {
             </div>
             <div className="plan-trip-body">
               <div className="planner-form-grid">
-                {/* Destination */}
-                <div className="form-group-full">
-                  <label className="planner-label">Destination</label>
+                {/* Destination with Autocomplete */}
+                <div className="form-group-full" style={{ position: "relative" }}>
+                  <label className="planner-label">🌍 Destination</label>
                   <input
+                    ref={inputRef}
                     name="destination"
                     type="text"
                     value={form.destination}
-                    onChange={handleChange}
+                    onChange={handleDestinationChange}
+                    onFocus={() => {
+                      if (form.destination && form.destination.length >= 2 && suggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
+                    }}
                     className="planner-input"
-                    placeholder="Where do you want to go? e.g., Paris, Skardu, Japan..."
+                    placeholder="Search any city or country worldwide... e.g., Tokyo, Paris, New York, Lahore..."
+                    autoComplete="off"
                   />
+
+                  {isLoadingSuggestions && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        background: "#1a2a3a",
+                        border: "1px solid #3b5f8c",
+                        borderRadius: "8px",
+                        padding: "10px",
+                        color: "#a3c6ff",
+                        textAlign: "center",
+                        zIndex: 1000,
+                        marginTop: "4px",
+                      }}
+                    >
+                      <i className="fas fa-spinner fa-spin"></i> Searching worldwide...
+                    </div>
+                  )}
+
+                  {!isLoadingSuggestions && showSuggestions && suggestions.length > 0 && (
+                    <div
+                      ref={suggestionRef}
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        background: "#1a2a3a",
+                        border: "1px solid #3b5f8c",
+                        borderRadius: "8px",
+                        maxHeight: "300px",
+                        overflowY: "auto",
+                        zIndex: 1000,
+                        marginTop: "4px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                      }}
+                    >
+                      {suggestions.map((suggestion, idx) => (
+                        <div
+                          key={idx}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            selectSuggestion(suggestion);
+                          }}
+                          style={{
+                            padding: "12px 15px",
+                            cursor: "pointer",
+                            color: "white",
+                            borderBottom: "1px solid #2a4a77",
+                            transition: "background 0.2s",
+                            fontSize: "14px",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#2a4a77";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          {suggestion.display}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "5px",
+                      color: "#6c8fb3",
+                      fontSize: "12px",
+                    }}
+                  >
+                    💡 Search any city 🏙️ or country 🌍 worldwide
+                  </small>
                 </div>
 
                 {/* Dates */}
                 <div className="planner-form-group">
-                  <label className="planner-label">Start Date</label>
+                  <label className="planner-label">📅 Start Date</label>
                   <input
                     name="startDate"
                     type="date"
@@ -965,7 +1185,7 @@ const handleViewTrip = (trip) => {
                 </div>
 
                 <div className="planner-form-group">
-                  <label className="planner-label">End Date</label>
+                  <label className="planner-label">📅 End Date</label>
                   <input
                     name="endDate"
                     type="date"
@@ -975,9 +1195,9 @@ const handleViewTrip = (trip) => {
                   />
                 </div>
 
-                {/* Interests & Travelers */}
+                {/* Interests */}
                 <div className="planner-form-group">
-                  <label className="planner-label">Interests</label>
+                  <label className="planner-label">🎯 Interests</label>
                   <select
                     name="interests"
                     value={form.interests}
@@ -993,8 +1213,9 @@ const handleViewTrip = (trip) => {
                   </select>
                 </div>
 
+                {/* Travelers */}
                 <div className="planner-form-group">
-                  <label className="planner-label">Travelers</label>
+                  <label className="planner-label">👥 Travelers</label>
                   <select
                     name="travelers"
                     value={form.travelers}
@@ -1003,6 +1224,24 @@ const handleViewTrip = (trip) => {
                   >
                     <option value="">Select number of travelers...</option>
                     {travelerOptions.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* ✅ BUDGET FIELD ADDED */}
+                <div className="planner-form-group">
+                  <label className="planner-label">💰 Budget Level</label>
+                  <select
+                    name="budget"
+                    value={form.budget}
+                    onChange={handleChange}
+                    className="planner-input"
+                  >
+                    <option value="">Select your budget...</option>
+                    {budgetOptions.map((option, index) => (
                       <option key={index} value={option}>
                         {option}
                       </option>
@@ -1020,7 +1259,8 @@ const handleViewTrip = (trip) => {
                   !form.startDate ||
                   !form.endDate ||
                   !form.interests ||
-                  !form.travelers
+                  !form.travelers ||
+                  !form.budget // ✅ BUDGET REQUIRED
                 }
               >
                 <i className="fas fa-magic"></i>
@@ -1068,9 +1308,7 @@ const handleViewTrip = (trip) => {
               {message && (
                 <div
                   className={`planner-message ${
-                    message.includes("Error")
-                      ? "message-error"
-                      : "message-success"
+                    message.includes("Error") ? "message-error" : "message-success"
                   }`}
                 >
                   {message}
@@ -1080,46 +1318,48 @@ const handleViewTrip = (trip) => {
           </div>
         )}
 
-        {/* Saved Trips Section */}
         {activeTab === "saved" && (
           <div className="saved-trips-section">
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#a3c6ff' }}>
-                <i className="fas fa-spinner fa-spin" style={{ fontSize: '30px', marginBottom: '15px' }}></i>
+              <div style={{ textAlign: "center", padding: "40px", color: "#a3c6ff" }}>
+                <i className="fas fa-spinner fa-spin" style={{ fontSize: "30px", marginBottom: "15px" }}></i>
                 <p>Loading your trips...</p>
               </div>
             ) : savedTrips.length > 0 ? (
-              <div className="saved-trips-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '20px'
-              }}>
+              <div
+                className="saved-trips-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                  gap: "20px",
+                }}
+              >
                 {savedTrips.map((trip) => (
                   <div
                     key={trip.id}
                     className="trip-card"
                     style={{
-                      background: '#0f2740',
-                      borderRadius: '12px',
-                      padding: '20px',
-                      border: '1px solid #2a4a77',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer'
+                      background: "#0f2740",
+                      borderRadius: "12px",
+                      padding: "20px",
+                      border: "1px solid #2a4a77",
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
                     }}
                     onClick={() => handleViewTrip(trip)}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-5px)';
-                      e.currentTarget.style.borderColor = '#FFD700';
+                      e.currentTarget.style.transform = "translateY(-5px)";
+                      e.currentTarget.style.borderColor = "#FFD700";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.borderColor = '#2a4a77';
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.borderColor = "#2a4a77";
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <h3 style={{ color: 'white', marginBottom: '10px', fontSize: '18px' }}>
-                        <i className="fas fa-map-marker-alt" style={{ color: '#FFD700', marginRight: '8px' }}></i>
-                        {trip.destination || trip.tripName || 'My Trip'}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <h3 style={{ color: "white", marginBottom: "10px", fontSize: "18px" }}>
+                        <i className="fas fa-map-marker-alt" style={{ color: "#FFD700", marginRight: "8px" }}></i>
+                        {trip.destination || trip.tripName || "My Trip"}
                       </h3>
                       <button
                         onClick={(e) => {
@@ -1127,71 +1367,58 @@ const handleViewTrip = (trip) => {
                           handleDeleteTrip(trip.id);
                         }}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          fontSize: '16px',
-                          padding: '5px'
+                          background: "none",
+                          border: "none",
+                          color: "#ef4444",
+                          cursor: "pointer",
+                          fontSize: "16px",
+                          padding: "5px",
                         }}
                       >
                         <i className="fas fa-trash-alt"></i>
                       </button>
                     </div>
-                    
-                    <p style={{ color: '#a3c6ff', marginBottom: '8px', fontSize: '14px' }}>
-                      <i className="fas fa-calendar" style={{ color: '#FFD700', marginRight: '8px', width: '16px' }}></i>
-                      {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : 'Date not set'} → 
-                      {trip.endDate ? new Date(trip.endDate).toLocaleDateString() : 'Date not set'}
+
+                    <p style={{ color: "#a3c6ff", marginBottom: "8px", fontSize: "14px" }}>
+                      <i className="fas fa-calendar" style={{ color: "#FFD700", marginRight: "8px", width: "16px" }}></i>
+                      {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : "Date not set"} →{" "}
+                      {trip.endDate ? new Date(trip.endDate).toLocaleDateString() : "Date not set"}
                     </p>
-                    
-                    <p style={{ color: '#a3c6ff', marginBottom: '8px', fontSize: '14px' }}>
-                      <i className="fas fa-users" style={{ color: '#FFD700', marginRight: '8px', width: '16px' }}></i>
-                      {trip.travelers || 'Not specified'}
+
+                    <p style={{ color: "#a3c6ff", marginBottom: "8px", fontSize: "14px" }}>
+                      <i className="fas fa-users" style={{ color: "#FFD700", marginRight: "8px", width: "16px" }}></i>
+                      {trip.travelers || "Not specified"}
                     </p>
-                    
-                    <p style={{ color: '#a3c6ff', marginBottom: '15px', fontSize: '14px' }}>
-                      <i className="fas fa-tag" style={{ color: '#FFD700', marginRight: '8px', width: '16px' }}></i>
-                      {trip.budgetLevel || trip.budget || 'Budget not specified'}
+
+                    <p style={{ color: "#a3c6ff", marginBottom: "15px", fontSize: "14px" }}>
+                      <i className="fas fa-tag" style={{ color: "#FFD700", marginRight: "8px", width: "16px" }}></i>
+                      {trip.budgetLevel || trip.budget || "Budget not specified"}
                     </p>
-                    
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                      <span style={{
-                        background: '#1e3a5f',
-                        color: '#FFD700',
-                        padding: '4px 10px',
-                        borderRadius: '15px',
-                        fontSize: '12px'
-                      }}>
+
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                      <span
+                        style={{
+                          background: "#1e3a5f",
+                          color: "#FFD700",
+                          padding: "4px 10px",
+                          borderRadius: "15px",
+                          fontSize: "12px",
+                        }}
+                      >
                         {trip.days?.length || 0} days
                       </span>
-                      <span style={{
-                        background: '#1e3a5f',
-                        color: '#FFD700',
-                        padding: '4px 10px',
-                        borderRadius: '15px',
-                        fontSize: '12px'
-                      }}>
+                      <span
+                        style={{
+                          background: "#1e3a5f",
+                          color: "#FFD700",
+                          padding: "4px 10px",
+                          borderRadius: "15px",
+                          fontSize: "12px",
+                        }}
+                      >
                         {trip.hotels?.length || 0} hotels
                       </span>
                     </div>
-
-                    {trip.preferences && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
-                        {trip.preferences.split(',').slice(0, 3).map((pref, idx) => (
-                          <span key={idx} style={{
-                            background: '#0a1929',
-                            color: '#a3c6ff',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            border: '1px solid #1e3a5f'
-                          }}>
-                            {pref.trim()}
-                          </span>
-                        ))}
-                      </div>
-                    )}
 
                     <button
                       onClick={(e) => {
@@ -1199,30 +1426,30 @@ const handleViewTrip = (trip) => {
                         handleViewTrip(trip);
                       }}
                       style={{
-                        width: '100%',
-                        marginTop: '10px',
-                        padding: '10px',
-                        background: '#1e3a5f',
-                        border: '1px solid #3b5f8c',
-                        color: 'white',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'all 0.3s ease'
+                        width: "100%",
+                        marginTop: "10px",
+                        padding: "10px",
+                        background: "#1e3a5f",
+                        border: "1px solid #3b5f8c",
+                        color: "white",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        transition: "all 0.3s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#2a4a77';
-                        e.currentTarget.style.borderColor = '#FFD700';
+                        e.currentTarget.style.background = "#2a4a77";
+                        e.currentTarget.style.borderColor = "#FFD700";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#1e3a5f';
-                        e.currentTarget.style.borderColor = '#3b5f8c';
+                        e.currentTarget.style.background = "#1e3a5f";
+                        e.currentTarget.style.borderColor = "#3b5f8c";
                       }}
                     >
-                      <i className="fas fa-eye" style={{ color: '#FFD700' }}></i>
+                      <i className="fas fa-eye" style={{ color: "#FFD700" }}></i>
                       View Full Itinerary
                     </button>
                   </div>
@@ -1237,10 +1464,7 @@ const handleViewTrip = (trip) => {
                 <p className="empty-state-text">
                   Start planning your first adventure and let AI create the perfect itinerary for you.
                 </p>
-                <button
-                  className="empty-state-btn"
-                  onClick={() => setActiveTab("plan")}
-                >
+                <button className="empty-state-btn" onClick={() => setActiveTab("plan")}>
                   Plan Your First Trip
                 </button>
               </div>

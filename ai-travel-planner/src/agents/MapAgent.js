@@ -3,27 +3,50 @@ class MapAgent {
   constructor() {
     this.name = "Map & Navigation Agent";
     this.expertise = "Managing map interactions and coordinates";
+    this.googleKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || null;
   }
 
   async getPlaceCoordinates(placeName, destination) {
     try {
-      // Use a CORS proxy to bypass CORS issues
+      // 1) Try Google Geocoding (best results) when API key is available
+      if (this.googleKey) {
+        try {
+          const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(placeName + ', ' + destination)}&key=${this.googleKey}`;
+          const proxyGeo = `https://api.allorigins.win/raw?url=${encodeURIComponent(geoUrl)}`;
+          const geoResp = await fetch(proxyGeo);
+          if (geoResp.ok) {
+            const geoData = await geoResp.json();
+            if (geoData && geoData.results && geoData.results.length > 0) {
+              const r = geoData.results[0];
+              return {
+                lat: r.geometry.location.lat,
+                lng: r.geometry.location.lng,
+                formattedAddress: r.formatted_address
+              };
+            }
+          }
+        } catch (gErr) {
+          console.warn('Google geocoding failed, falling back to OSM', gErr.message || gErr);
+        }
+      }
+
+      // 2) Fallback: Use a CORS proxy for Nominatim (OpenStreetMap)
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName + ', ' + destination)}&limit=1`;
       const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      
+
       const response = await fetch(proxyUrl, {
-        headers: { 
+        headers: {
           'User-Agent': 'AITravelPlanner/1.0',
           'Accept': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data && data.length > 0) {
         return {
           lat: parseFloat(data[0].lat),
@@ -40,6 +63,59 @@ class MapAgent {
       console.error("Error getting coordinates for", placeName, ":", error.message);
       // Return mock coordinates as fallback
       return this.getMockCoordinates(placeName, destination);
+    }
+  }
+
+  // Search Google Places Text Search via proxy and return results array (fallbacks to empty array)
+  async searchGooglePlacesText(query, limit = 10) {
+    if (!this.googleKey) return [];
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${this.googleKey}&pagetoken=`;
+      const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const resp = await fetch(proxy);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      const results = Array.isArray(data.results) ? data.results.slice(0, limit) : [];
+      return results;
+    } catch (e) {
+      console.warn('searchGooglePlacesText failed', e);
+      return [];
+    }
+  }
+
+  // Construct a Google Place Photo URL (usable directly in <img src>)
+  getGooglePlacePhotoUrl(photoReference, maxwidth = 400) {
+    if (!this.googleKey || !photoReference) return null;
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxwidth}&photoreference=${photoReference}&key=${this.googleKey}`;
+  }
+
+  // Fetch curated attractions for a destination using Google Places (fallback to empty array)
+  async fetchAttractionsForDestination(destination, limit = 8) {
+    try {
+      if (!destination) return [];
+      // Try text search: 'tourist attractions in {destination}'
+      const query = `tourist attractions in ${destination}`;
+      const results = await this.searchGooglePlacesText(query, limit);
+      if (!results || results.length === 0) return [];
+
+      const mapped = results.map((r) => ({
+        name: r.name,
+        description: r.formatted_address || (r.types ? r.types.join(', ') : ''),
+        lat: r.geometry?.location?.lat,
+        lng: r.geometry?.location?.lng,
+        address: r.formatted_address || r.vicinity || null,
+        place_id: r.place_id,
+        types: r.types || [],
+        rating: r.rating || null,
+        user_ratings_total: r.user_ratings_total || 0,
+        opening_hours: r.opening_hours || null,
+        photoUrl: (r.photos && r.photos.length > 0) ? this.getGooglePlacePhotoUrl(r.photos[0].photo_reference, 400) : null,
+      }));
+
+      return mapped.slice(0, limit);
+    } catch (e) {
+      console.warn('fetchAttractionsForDestination failed', e);
+      return [];
     }
   }
 

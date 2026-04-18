@@ -1,13 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import "../CSS/Landing.css";
+import FeedbackModal from "../components/FeedbackModal";
+import TestimonialsCarousel from "../components/TestimonialsCarousel";
+import { db } from "../firebase";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 
 export default function LandingPage() {
   const { currentUser } = useAuth();
   const nav = useNavigate();
   const [form, setForm] = useState({ destination: "", dates: "" });
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchFeedbacks = async () => {
+    try {
+      const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setFeedbacks(items);
+    } catch (err) {
+      console.error("Failed to fetch feedbacks", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, []);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -203,45 +224,55 @@ export default function LandingPage() {
           </div>
 
           <div className="testimonials-grid">
-            <div className="testimonial-card">
-              <div className="testimonial-content">
-                <p>"This app saved me hours of research. The AI suggestions were spot on for my Europe trip!"</p>
-              </div>
-              <div className="testimonial-author">
-                <div className="author-avatar">SD</div>
-                <div className="author-info">
-                  <h4>Sarah Davis</h4>
-                  <span>Travel Enthusiast</span>
+            {feedbacks && feedbacks.length > 1 ? (
+              <TestimonialsCarousel feedbacks={feedbacks} />
+            ) : feedbacks && feedbacks.length === 1 ? (
+              feedbacks.map((f) => (
+                <div key={f.id} className="testimonial-card">
+                  <div className="testimonial-author-top">
+                    <div className="author-avatar">{(f.name || "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
+                    <div className="author-info">
+                      <h4>{f.name || "Anonymous"}</h4>
+                      {((f.location && f.location.trim()) || (f.role && f.role.trim())) && (
+                        <div className="author-location">{f.location || f.role}</div>
+                      )}
+                      {f.country && <div className="author-country">{f.country}</div>}
+                    </div>
+                  </div>
+
+                  <div className="rating-display">
+                    {Array.from({ length: 5 }).map((_, idx) => (
+                      <span key={idx} className={`star ${idx < (Number(f.rating) || 0) ? 'filled' : ''}`}>
+                        &#9733;
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="testimonial-content">
+                    <p>{f.message}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="testimonial-card">
+                <div className="testimonial-content">
+                  <p>No feedback yet. Be the first to share your experience!</p>
+                </div>
+                <div className="testimonial-author">
+                  <div className="author-avatar">+</div>
+                  <div className="author-info">
+                    <h4>Be First</h4>
+                    <span>Share your thoughts</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="testimonial-card">
-              <div className="testimonial-content">
-                <p>"The budget feature helped me save over $500 without compromising on experiences. Amazing!"</p>
-              </div>
-              <div className="testimonial-author">
-                <div className="author-avatar">MJ</div>
-                <div className="author-info">
-                  <h4>Michael Johnson</h4>
-                  <span>Adventure Traveler</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="testimonial-card">
-              <div className="testimonial-content">
-                <p>"I love how the app adapts to changing plans. Real-time updates were a lifesaver in Japan!"</p>
-              </div>
-              <div className="testimonial-author">
-                <div className="author-avatar">EC</div>
-                <div className="author-info">
-                  <h4>Emma Chen</h4>
-                  <span>Frequent Traveler</span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
+          <button className="feedback-float-btn" onClick={() => setIsModalOpen(true)} aria-label="Give feedback">
+            <i className="fas fa-comment-dots feedback-btn-icon" aria-hidden="true"></i>
+            <span className="feedback-btn-text">Give Feedback</span>
+          </button>
+          <FeedbackModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchFeedbacks} />
         </div>
       </section>
 

@@ -17,6 +17,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import GeneratePlan from "./pages/GeneratePlan";
 import MapTest from "./pages/MapTest";
 import TripMap from "./components/TripMap";
+import TravelResources from "./pages/TravelResources";
 
 
 import "./App.css";
@@ -49,6 +50,7 @@ function App() {
           />
          
           <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/travel-resources" element={<TravelResources />} />
           <Route
             path="/profile"
             element={

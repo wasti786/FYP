@@ -1,44 +1,34 @@
-// src/agents/ItineraryAgent.js
+
+import apiService from '../services/apiService';
+
 class ItineraryAgent {
   constructor() {
     this.name = "Itinerary Planner Agent";
-    this.expertise = "Creating day-by-day travel itineraries";
+    this.expertise = "Creating day-by-day travel itineraries using Gemini AI";
   }
 
   async generateItinerary(destination, startDate, endDate, preferences, travelers) {
     try {
-      console.log(`🤖 ${this.name} is planning your trip to ${destination}...`);
+      console.log(`🤖 ${this.name} is planning your trip...`);
       
-      // Call your existing backend API
-      const payload = {
+      const duration = this.calculateDays(startDate, endDate);
+      
+      // Generate itinerary (without hotels)
+      const itinerary = await apiService.generateItinerary(
         destination,
-        startDate,
-        endDate,
+        duration,
         travelers,
         preferences
+      );
+      
+      // Generate hotels separately
+      const budgetLevel = "Mid-range"; // You can pass this from payload
+      const hotels = await apiService.generateHotels(destination, travelers, budgetLevel);
+      
+      return {
+        ...itinerary,
+        hotels: hotels
       };
-      
-      const response = await fetch("http://localhost:5000/api/generate-plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || "AI generation failed");
-      }
-
-      if (!data.plan?.days?.length) {
-        throw new Error("No itinerary returned from AI");
-      }
-
-      return data.plan;
       
     } catch (error) {
       console.error("Itinerary Agent Error:", error);
@@ -53,5 +43,7 @@ class ItineraryAgent {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 }
-
 export { ItineraryAgent };
+
+
+
